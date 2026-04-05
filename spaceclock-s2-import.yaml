@@ -1,0 +1,25 @@
+dashboard_import:
+  package_import_url: github://willtho89/SpaceClock/spaceclock-s2-import.yaml@main
+  import_full_config: false
+
+packages:
+  base:
+    url: https://github.com/willtho89/SpaceClock
+    ref: main
+    files:
+      - packages/spaceclock-base.yaml
+
+substitutions:
+  device_name: spaceclock
+  friendly_name: SpaceClock
+  led_pin: GPIO16
+  button_pin: GPIO0
+  num_leds: "45"
+  matrix_height: "5"
+  active_y_offset: "1"
+  serpentine_phase: "0"
+
+esp32:
+  board: lolin_s2_mini
+  framework:
+    type: esp-idf

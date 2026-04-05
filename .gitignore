@@ -1,0 +1,9 @@
+.DS_Store
+.esphome/
+.idea/
+.platformio/
+.venv/
+__pycache__/
+*.pyc
+build/
+secrets.yaml

@@ -1,0 +1,387 @@
+substitutions:
+  device_name: spaceclock
+  friendly_name: SpaceClock
+  timezone: Europe/Berlin
+  fallback_ap_password: spaceclock-setup
+  spaceclock_repo_url: https://github.com/willtho89/SpaceClock
+  spaceclock_repo_ref: main
+  led_pin: GPIO16
+  button_pin: GPIO0
+  num_leds: "45"
+  matrix_width: "9"
+  matrix_height: "5"
+  active_y_offset: "1"
+  serpentine_phase: "0"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  min_version: 2026.3.2
+  project:
+    name: haxko.spaceclock
+    version: "1.0.0"
+  includes:
+    - <esphome/components/spaceclock_support/spaceclock_renderer.h>
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(palette_select).publish_state(spaceclock::palette_name(id(palette_mode)));
+
+external_components:
+  - source:
+      type: git
+      url: ${spaceclock_repo_url}
+      ref: ${spaceclock_repo_ref}
+    components: [spaceclock_support]
+
+logger:
+
+api:
+  # Intentionally left unencrypted in the shared package so the
+  # config can be adopted directly from a remote git package.
+
+ota:
+  - platform: esphome
+
+wifi:
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: ${fallback_ap_password}
+
+captive_portal:
+
+improv_serial:
+
+spaceclock_support:
+  id: spaceclock_support_runtime
+
+globals:
+  - id: display_enabled
+    type: bool
+    restore_value: yes
+    initial_value: "true"
+  - id: display_brightness
+    type: float
+    restore_value: yes
+    initial_value: "1.0"
+  - id: palette_mode
+    type: int
+    restore_value: yes
+    initial_value: "0"
+  - id: binary_clock_mode
+    type: bool
+    restore_value: yes
+    initial_value: "false"
+  - id: numeric_clock_mode
+    type: bool
+    restore_value: yes
+    initial_value: "false"
+  - id: debug_clock_mode
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: debug_clock_start_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: "0"
+  - id: animation_mode
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: animation_step_counter
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: render_speed
+    type: int
+    restore_value: yes
+    initial_value: "50"
+  - id: continuous_animation
+    type: bool
+    restore_value: yes
+    initial_value: "false"
+
+time:
+  - platform: homeassistant
+    id: ha_time
+  - platform: sntp
+    id: sntp_time
+    timezone: ${timezone}
+
+output:
+  - platform: template
+    id: matrix_brightness_output
+    type: float
+    write_action:
+      - lambda: |-
+          if (state <= 0.0f) {
+            id(display_enabled) = false;
+            id(display_brightness) = 0.0f;
+          } else {
+            id(display_enabled) = true;
+            id(display_brightness) = state;
+          }
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: matrix_light
+    internal: true
+    pin: ${led_pin}
+    num_leds: ${num_leds}
+    chipset: WS2812
+    rgb_order: GRB
+    restore_mode: ALWAYS_ON
+    max_refresh_rate: 16ms
+    default_transition_length: 0s
+    flash_transition_length: 0s
+
+  - platform: monochromatic
+    name: None
+    output: matrix_brightness_output
+    restore_mode: RESTORE_DEFAULT_ON
+    default_transition_length: 0s
+    gamma_correct: 1.0
+
+display:
+  - platform: addressable_light
+    id: matrix_display
+    addressable_light_id: matrix_light
+    width: ${matrix_width}
+    height: ${matrix_height}
+    update_interval: 100ms
+    pixel_mapper: |-
+      const bool direct = ((y + ${serpentine_phase}) % 2) == 0;
+      return (y * ${matrix_width}) + (direct ? x : (${matrix_width} - 1 - x));
+    lambda: |-
+      static spaceclock::Renderer renderer;
+      static const spaceclock::RenderConfig config{
+        ${active_y_offset},
+        ${serpentine_phase},
+        ${matrix_width},
+        ${matrix_height},
+        9,
+        3,
+      };
+      renderer.render(
+        it,
+        config,
+        id(display_enabled),
+        id(display_brightness),
+        id(palette_mode),
+        id(binary_clock_mode),
+        id(numeric_clock_mode),
+        id(debug_clock_mode),
+        id(debug_clock_start_ms),
+        id(animation_mode),
+        id(animation_step_counter),
+        id(render_speed),
+        id(continuous_animation),
+        id(ha_time).now(),
+        id(sntp_time).now()
+      );
+
+switch:
+  - platform: template
+    name: "Clock Classic"
+    id: classic_clock_switch
+    entity_category: config
+    lambda: |-
+      return !id(binary_clock_mode) && !id(numeric_clock_mode);
+    turn_on_action:
+      - lambda: |-
+          id(binary_clock_mode) = false;
+          id(numeric_clock_mode) = false;
+          id(animation_mode) = 0;
+
+  - platform: template
+    name: "Clock Binary"
+    id: binary_clock_switch
+    entity_category: config
+    lambda: |-
+      return id(binary_clock_mode);
+    turn_on_action:
+      - lambda: |-
+          id(binary_clock_mode) = true;
+          id(numeric_clock_mode) = false;
+          id(animation_mode) = 0;
+    turn_off_action:
+      - lambda: |-
+          id(binary_clock_mode) = false;
+
+  - platform: template
+    name: "Clock 24h"
+    id: numeric_clock_switch
+    entity_category: config
+    lambda: |-
+      return id(numeric_clock_mode);
+    turn_on_action:
+      - lambda: |-
+          id(numeric_clock_mode) = true;
+          id(binary_clock_mode) = false;
+          id(animation_mode) = 0;
+    turn_off_action:
+      - lambda: |-
+          id(numeric_clock_mode) = false;
+
+  - platform: template
+    name: "Continuous Animation"
+    id: continuous_animation_switch
+    entity_category: config
+    lambda: |-
+      return id(continuous_animation);
+    turn_on_action:
+      - lambda: |-
+          id(continuous_animation) = true;
+    turn_off_action:
+      - lambda: |-
+          id(continuous_animation) = false;
+
+select:
+  - platform: template
+    name: "Palette"
+    id: palette_select
+    entity_category: config
+    options:
+      - Classic
+      - Ice
+      - Amber
+      - Neon
+      - Mono
+      - Sunset
+      - Mint
+    initial_option: Classic
+    set_action:
+      - lambda: |-
+          id(palette_mode) = spaceclock::palette_mode_from_name(x);
+          id(palette_select).publish_state(spaceclock::palette_name(id(palette_mode)));
+
+number:
+  - platform: template
+    name: "Speed"
+    id: speed_number
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 50
+    mode: slider
+    set_action:
+      - lambda: |-
+          id(render_speed) = int(x);
+
+button:
+  - platform: template
+    name: "Animation Bars"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 3;
+
+  - platform: template
+    name: "Animation Equalizer"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 8;
+
+  - platform: template
+    name: "Animation Fireworks"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 7;
+
+  - platform: template
+    name: "Animation HAXKO"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 4;
+
+  - platform: template
+    name: "Animation Meteor"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 5;
+
+  - platform: template
+    name: "Animation Noise"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 2;
+
+  - platform: template
+    name: "Animation Radar"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 6;
+
+  - platform: template
+    name: "Animation Snake"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 1;
+
+  - platform: template
+    name: "Animation Starfield"
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 9;
+
+  - platform: template
+    name: "Debug Clock"
+    entity_category: diagnostic
+    disabled_by_default: true
+    on_press:
+      - lambda: |-
+          id(animation_mode) = 0;
+          if (id(debug_clock_mode)) {
+            id(debug_clock_mode) = false;
+          } else {
+            id(debug_clock_mode) = true;
+            id(debug_clock_start_ms) = esphome::millis();
+          }
+
+binary_sensor:
+  - platform: gpio
+    id: hardware_button
+    internal: true
+    pin:
+      number: ${button_pin}
+      mode:
+        input: true
+        pulldown: true
+    on_click:
+      - min_length: 50ms
+        max_length: 350ms
+        then:
+          - lambda: |-
+              if (id(animation_mode) != 0) {
+                id(animation_mode) = 0;
+              } else if (id(binary_clock_mode)) {
+                id(binary_clock_mode) = false;
+              } else if (id(numeric_clock_mode)) {
+                id(numeric_clock_mode) = false;
+              } else {
+                id(palette_mode) = (id(palette_mode) + 1) % 7;
+                id(palette_select).publish_state(spaceclock::palette_name(id(palette_mode)));
+              }
+      - min_length: 700ms
+        max_length: 3000ms
+        then:
+          - lambda: |-
+              id(animation_mode) = (id(animation_mode) + 1) % 10;
+
+text_sensor:
+  - platform: template
+    name: "Active Mode"
+    entity_category: diagnostic
+    lambda: |-
+      return {
+        spaceclock::active_mode_name(
+          id(animation_mode),
+          id(binary_clock_mode),
+          id(numeric_clock_mode),
+          id(palette_mode)
+        )
+      };
+    update_interval: 1s
