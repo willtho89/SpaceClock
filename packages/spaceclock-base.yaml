@@ -3,8 +3,6 @@ substitutions:
   friendly_name: SpaceClock
   timezone: Europe/Berlin
   fallback_ap_password: spaceclock-setup
-  spaceclock_repo_url: https://github.com/willtho89/SpaceClock
-  spaceclock_repo_ref: main
   led_pin: GPIO16
   button_pin: GPIO0
   num_leds: "45"
@@ -19,7 +17,7 @@ esphome:
   min_version: 2026.3.2
   project:
     name: haxko.spaceclock
-    version: "1.0.0"
+    version: "1.0.1"
   includes:
     - <esphome/components/spaceclock_support/spaceclock_renderer.h>
   on_boot:
@@ -28,18 +26,11 @@ esphome:
       - lambda: |-
           id(palette_select).publish_state(spaceclock::palette_name(id(palette_mode)));
 
-external_components:
-  - source:
-      type: git
-      url: ${spaceclock_repo_url}
-      ref: ${spaceclock_repo_ref}
-    components: [spaceclock_support]
-
 logger:
 
 api:
-  # Intentionally left unencrypted in the shared package so the
-  # config can be adopted directly from a remote git package.
+# Shared package contains only non-sensitive API configuration.
+# Secrets and credentials must be supplied via local overrides or environment variables.
 
 ota:
   - platform: esphome
@@ -183,7 +174,7 @@ display:
 
 switch:
   - platform: template
-    name: "Clock Classic"
+    name: "Clock Space"
     id: classic_clock_switch
     entity_category: config
     lambda: |-
@@ -326,6 +317,19 @@ button:
     on_press:
       - lambda: |-
           id(animation_mode) = 9;
+
+  - platform: template
+    name: "Reset Configuration"
+    entity_category: config
+    on_press:
+      - switch.turn_on: classic_clock_switch
+      - switch.turn_off: continuous_animation_switch
+      - number.set:
+          id: speed_number
+          value: 50
+      - select.set:
+          id: palette_select
+          option: Classic
 
   - platform: template
     name: "Debug Clock"

@@ -3,11 +3,7 @@ dashboard_import:
   import_full_config: false
 
 packages:
-  base:
-    url: https://github.com/willtho89/SpaceClock
-    ref: main
-    files:
-      - packages/spaceclock-base.yaml
+  base: !include packages/spaceclock-base.yaml
 
 substitutions:
   device_name: spaceclock
@@ -27,3 +23,9 @@ esp32:
   board: lolin_s2_mini
   framework:
     type: esp-idf
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [spaceclock_support]

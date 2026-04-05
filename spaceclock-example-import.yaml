@@ -23,3 +23,10 @@ esp32:
   board: esp32-c3-devkitm-1
   framework:
     type: esp-idf
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/willtho89/SpaceClock
+      ref: main
+    components: [spaceclock_support]

@@ -16,7 +16,7 @@ const int kBurstDy[8] = {0, 0, 1, -1, 1, 1, -1, -1};
 
 uint8_t glyph_column(char ch, int col) {
   static const uint8_t kH[3] = {0b11111, 0b00100, 0b11111};
-  static const uint8_t kA[3] = {0b11110, 0b00101, 0b11110};
+  static const uint8_t kA[3] = {0b01111, 0b10100, 0b01111};
   static const uint8_t kX[3] = {0b11011, 0b00100, 0b11011};
   static const uint8_t kK[3] = {0b11111, 0b00100, 0b11011};
   static const uint8_t kO[3] = {0b01110, 0b10001, 0b01110};
@@ -284,11 +284,11 @@ inline bool Renderer::render_snake_(const AnimationContext &ctx) {
     }
   }
 
-  this->draw_matrix_xy_(ctx.draw, this->apple_x_, this->apple_y_,
+  this->draw_animation_xy_(ctx.draw, this->apple_x_, this->apple_y_,
                         this->snake_len_ >= ctx.max_apples ? this->palette_color_(ctx.draw, 100, 100, 8, 80, 180, 220)
                                                            : this->palette_color_(ctx.draw, 110, 8, 8, 160, 0, 190));
   for (int i = this->snake_len_ - 1; i >= 0; i--) {
-    this->draw_matrix_xy_(
+    this->draw_animation_xy_(
         ctx.draw, this->snake_x_[i], this->snake_y_[i],
         i == 0 ? this->palette_color_(ctx.draw, 8, 200, 8, 0, 190, 220)
                : this->palette_color_(ctx.draw, 3, 70, 3, 70, 0, 110));
@@ -315,7 +315,7 @@ inline bool Renderer::render_noise_(const AnimationContext &ctx) {
     for (int x = 0; x < ctx.draw.animation_width; x++) {
       const int idx = (y * ctx.draw.animation_width) + x;
       const int level = this->noise_level_[idx];
-      this->draw_matrix_xy_(ctx.draw, x, y,
+      this->draw_animation_xy_(ctx.draw, x, y,
                             this->palette_color_(ctx.draw, level, level, level, level, 0,
                                                  level + this->noise_variant_[idx] * 20));
     }
@@ -343,19 +343,19 @@ inline bool Renderer::render_bars_(const AnimationContext &ctx) {
   const int prev_color_idx = prev_pos % 9;
 
   for (int y = 0; y < ctx.draw.animation_height; y++) {
-    this->draw_matrix_xy_(ctx.draw, prev_pos, y,
+    this->draw_animation_xy_(ctx.draw, prev_pos, y,
                           this->palette_color_(ctx.draw, kBarsR[prev_color_idx] / 6, kBarsG[prev_color_idx] / 6,
                                                kBarsB[prev_color_idx] / 6, kAltBarsR[prev_color_idx] / 6,
                                                kAltBarsG[prev_color_idx] / 6, kAltBarsB[prev_color_idx] / 6));
-    this->draw_matrix_xy_(ctx.draw, prev_mirror, y,
+    this->draw_animation_xy_(ctx.draw, prev_mirror, y,
                           this->palette_color_(ctx.draw, kBarsR[prev_color_idx] / 6, kBarsG[prev_color_idx] / 6,
                                                kBarsB[prev_color_idx] / 6, kAltBarsR[prev_color_idx] / 6,
                                                kAltBarsG[prev_color_idx] / 6, kAltBarsB[prev_color_idx] / 6));
-    this->draw_matrix_xy_(
+    this->draw_animation_xy_(
         ctx.draw, pos, y,
         this->palette_color_(ctx.draw, kBarsR[color_idx], kBarsG[color_idx], kBarsB[color_idx], kAltBarsR[color_idx],
                              kAltBarsG[color_idx], kAltBarsB[color_idx]));
-    this->draw_matrix_xy_(
+    this->draw_animation_xy_(
         ctx.draw, mirror, y,
         this->palette_color_(ctx.draw, kBarsR[color_idx], kBarsG[color_idx], kBarsB[color_idx], kAltBarsR[color_idx],
                              kAltBarsG[color_idx], kAltBarsB[color_idx]));
@@ -395,7 +395,7 @@ inline bool Renderer::render_logo_(const AnimationContext &ctx) {
       if (bits & (1 << (4 - y))) {
         const esphome::Color color = text[char_index] == 'X' ? this->palette_color_(ctx.draw, 180, 70, 0, 160, 0, 190)
                                                              : this->palette_color_(ctx.draw, 134, 172, 172, 0, 190, 220);
-        this->draw_matrix_xy_(ctx.draw, x, y, color);
+        this->draw_animation_xy_(ctx.draw, x, y, color);
       }
     }
   }
@@ -427,14 +427,14 @@ inline bool Renderer::render_meteor_(const AnimationContext &ctx) {
       continue;
     }
 
-    const int y = ctx.draw.animation_width > 1 ? (x * (ctx.draw.animation_height - 1)) / (ctx.draw.animation_width - 1)
+    const int y = ctx.draw.animation_width > 1 ? ((x * (ctx.draw.animation_height - 1)) / (ctx.draw.animation_width - 1))
                                                : 0;
     const int fade = tail_length - segment;
-    this->draw_matrix_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 35 * fade, 22 * fade, 6 * fade,
+    this->draw_animation_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 35 * fade, 22 * fade, 6 * fade,
                                                                 24 * fade, 8 * fade, 36 * fade));
 
-    if (segment == 0 && y + 1 < ctx.draw.animation_height) {
-      this->draw_matrix_xy_(ctx.draw, x, y + 1, this->palette_color_(ctx.draw, 20, 10, 2, 12, 0, 18));
+    if (segment == 0 && y - 1 >= 0) {
+      this->draw_animation_xy_(ctx.draw, x, y - 1, this->palette_color_(ctx.draw, 20, 10, 2, 12, 0, 18));
     }
   }
 
@@ -460,11 +460,11 @@ inline bool Renderer::render_radar_(const AnimationContext &ctx) {
     for (int x = 0; x < ctx.draw.animation_width; x++) {
       const int dist = std::abs(x - cx) + std::abs(y - cy);
       if (dist == ring) {
-        this->draw_matrix_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 0, 140, 50, 0, 130, 180));
+        this->draw_animation_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 0, 140, 50, 0, 130, 180));
       } else if (dist == ring - 1) {
-        this->draw_matrix_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 0, 28, 10, 0, 26, 36));
+        this->draw_animation_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 0, 28, 10, 0, 26, 36));
       } else if (dist == 0) {
-        this->draw_matrix_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 0, 45, 16, 0, 36, 52));
+        this->draw_animation_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, 0, 45, 16, 0, 36, 52));
       }
     }
   }
@@ -486,30 +486,32 @@ inline bool Renderer::render_fireworks_(const AnimationContext &ctx) {
   }
 
   if (ctx.animation_step_counter < rise_frames) {
-    const int rise_distance = (ctx.draw.animation_height - 1) - this->firework_peak_y_;
-    const int y = rise_distance > 0
-                      ? (ctx.draw.animation_height - 1) - ((ctx.animation_step_counter * rise_distance) / (rise_frames - 1))
-                      : this->firework_peak_y_;
-    this->draw_matrix_xy_(ctx.draw, this->firework_x_, y, this->palette_color_(ctx.draw, 180, 120, 20, 220, 80, 0));
+    const int bottom_y = ctx.draw.animation_height - 1;
+    const int rise_distance = bottom_y - this->firework_peak_y_;
+    const int y = rise_distance > 0 ? bottom_y - ((ctx.animation_step_counter * rise_distance) / (rise_frames - 1))
+                                    : bottom_y;
+    this->draw_animation_xy_(ctx.draw, this->firework_x_, y,
+                             this->palette_color_(ctx.draw, 180, 120, 20, 220, 80, 0));
     if (y + 1 < ctx.draw.animation_height) {
-      this->draw_matrix_xy_(ctx.draw, this->firework_x_, y + 1, this->palette_color_(ctx.draw, 40, 20, 4, 28, 8, 0));
+      this->draw_animation_xy_(ctx.draw, this->firework_x_, y + 1,
+                               this->palette_color_(ctx.draw, 40, 20, 4, 28, 8, 0));
     }
     return true;
   }
 
   const int burst_step = ctx.animation_step_counter - rise_frames;
-  this->draw_matrix_xy_(ctx.draw, this->firework_x_, this->firework_peak_y_,
-                        this->palette_color_(ctx.draw, 180, 180, 60, 220, 120, 200));
+  this->draw_animation_xy_(ctx.draw, this->firework_x_, this->firework_peak_y_,
+                           this->palette_color_(ctx.draw, 180, 180, 60, 220, 120, 200));
 
   for (int i = 0; i < 8; i++) {
     const int x = this->firework_x_ + (kBurstDx[i] * burst_step);
     const int y = this->firework_peak_y_ + (kBurstDy[i] * burst_step);
-    this->draw_matrix_xy_(ctx.draw, x, y,
-                          i < 4 ? this->palette_color_(ctx.draw, 180, 90, 10, 200, 0, 220)
-                                : this->palette_color_(ctx.draw, 120, 140, 24, 0, 170, 220));
+    this->draw_animation_xy_(ctx.draw, x, y,
+                             i < 4 ? this->palette_color_(ctx.draw, 180, 90, 10, 200, 0, 220)
+                                   : this->palette_color_(ctx.draw, 120, 140, 24, 0, 170, 220));
     if (burst_step > 0) {
-      this->draw_matrix_xy_(ctx.draw, x - kBurstDx[i], y - kBurstDy[i],
-                            this->palette_color_(ctx.draw, 24, 10, 2, 18, 0, 24));
+      this->draw_animation_xy_(ctx.draw, x - kBurstDx[i], y - kBurstDy[i],
+                               this->palette_color_(ctx.draw, 24, 10, 2, 18, 0, 24));
     }
   }
 
@@ -534,8 +536,8 @@ inline bool Renderer::render_equalizer_(const AnimationContext &ctx) {
       height = ctx.draw.animation_height;
     }
     for (int level = 0; level < height; level++) {
-      const int y = ctx.draw.animation_height - 1 - level;
-      this->draw_matrix_xy_(ctx.draw, x, y,
+      const int y = (ctx.draw.animation_height - 1) - level;
+      this->draw_animation_xy_(ctx.draw, x, y,
                             level == height - 1
                                 ? this->palette_color_(ctx.draw, 160, 120, 10, 220, 0, 180)
                                 : this->palette_color_(ctx.draw, 20 + (x * 10), 60 + (level * 30), 10, 0,
@@ -571,10 +573,11 @@ inline bool Renderer::render_starfield_(const AnimationContext &ctx) {
     const int y = this->star_y_[i];
     if (x >= 0 && x < ctx.draw.animation_width) {
       const int bright = 40 + (this->star_level_[i] * 45);
-      this->draw_matrix_xy_(ctx.draw, x, y, this->palette_color_(ctx.draw, bright, bright, bright, bright, 0, bright));
+      this->draw_animation_xy_(ctx.draw, x, y,
+                               this->palette_color_(ctx.draw, bright, bright, bright, bright, 0, bright));
     }
     if (this->star_level_[i] >= 2 && x + 1 >= 0 && x + 1 < ctx.draw.animation_width) {
-      this->draw_matrix_xy_(ctx.draw, x + 1, y, this->palette_color_(ctx.draw, 16, 16, 16, 16, 0, 16));
+      this->draw_animation_xy_(ctx.draw, x + 1, y, this->palette_color_(ctx.draw, 16, 16, 16, 16, 0, 16));
     }
   }
 

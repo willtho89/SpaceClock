@@ -248,6 +248,16 @@ inline void Renderer::draw_matrix_xy_(const DrawContext &ctx, int x, int y, esph
   ctx.display.draw_pixel_at(x, y, color);
 }
 
+inline void Renderer::draw_animation_xy_(const DrawContext &ctx, int x, int y, esphome::Color color) const {
+  if (x < 0 || x >= ctx.animation_width || y < 0 || y >= ctx.animation_height) {
+    return;
+  }
+
+  // Mirror animation rows to match the installed panel orientation.
+  // The clock renderers already compensate on their own paths.
+  ctx.display.draw_pixel_at(x, (ctx.animation_height - 1) - y, color);
+}
+
 inline void Renderer::draw_binary_row_(const DrawContext &ctx, int value, int bits, int y, esphome::Color on_color,
                                        esphome::Color off_color) const {
   const int start_x = (ctx.active_width - bits + 1) / 2;

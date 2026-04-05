@@ -4,8 +4,8 @@ SpaceClock is an ESPHome port of the original SpaceUhr workshop clock. This repo
 
 ## Supported Configurations
 
-- `spaceclock-s2.yaml`: local ESP32-S2 build that reads Wi-Fi credentials from `secrets.yaml`
-- `spaceclock-example.yaml`: editable local template that reads Wi-Fi credentials from `secrets.yaml`
+- `spaceclock-s2.yaml`: local ESP32-S2 build that reads Wi-Fi credentials from `secrets.yaml` and uses the local package and component sources from this checkout
+- `spaceclock-example.yaml`: editable local template that reads Wi-Fi credentials from `secrets.yaml` and uses the local package and component sources from this checkout
 - `spaceclock-s2-import.yaml`: tested ESP32-S2 GitHub import wrapper for a 9x5 / 45 LED matrix on `GPIO16` with the button on `GPIO0`
 - `spaceclock-example-import.yaml`: editable GitHub import template for your own ESP32 board, matrix layout, and pinout
 
@@ -43,6 +43,8 @@ The published `*-import.yaml` wrappers intentionally do not embed Wi-Fi credenti
    `uv sync`
 4. Copy `secrets.example.yaml` to `secrets.yaml` and set your local Wi-Fi credentials.
 5. If you use `spaceclock-example.yaml`, adjust the board, LED pin, button pin, LED count, matrix height, active offset, and serpentine phase to match your hardware.
+
+The local wrapper YAMLs intentionally use `!include packages/spaceclock-base.yaml` plus a local `external_components` path, so local edits are picked up immediately without pushing to GitHub. The `*-import.yaml` wrappers intentionally keep the GitHub package/component sources so ESPHome dashboard imports continue to work from Home Assistant.
 
 ## Validate, Build, And Flash
 

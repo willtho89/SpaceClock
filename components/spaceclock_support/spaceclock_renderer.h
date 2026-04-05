@@ -74,6 +74,7 @@ class Renderer {
   void draw_active_index_(const DrawContext &ctx, int active_index, esphome::Color color) const;
   void draw_active_xy_(const DrawContext &ctx, int x, int y, esphome::Color color) const;
   void draw_matrix_xy_(const DrawContext &ctx, int x, int y, esphome::Color color) const;
+  void draw_animation_xy_(const DrawContext &ctx, int x, int y, esphome::Color color) const;
   void draw_binary_row_(const DrawContext &ctx, int value, int bits, int y, esphome::Color on_color,
                         esphome::Color off_color) const;
   void draw_matrix_digit_(const DrawContext &ctx, int digit, int left_x, int top_y, esphome::Color on_color,
